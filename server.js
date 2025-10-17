@@ -56,6 +56,30 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+app.get("/api/loadChaters/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  const query = `
+  SELECT DISTINCT u.id, u.user_name, cs.chat_id, cs.sender_id, cs.receiver_id, ch.chat_description, ch.created_at 
+  FROM user u
+  JOIN chat_sessions cs
+    ON (u.id = cs.sender_id OR u.id = cs.receiver_id)
+  JOIN chat_history ch 
+    ON (ch.chat_id = cs.chat_id) 
+  WHERE cs.sender_id = ?  OR cs.receiver_id = ?
+  GROUP BY u.id
+  ORDER BY ch.created_at DESC 
+  `;
+
+  try {
+    const [result] = await pool.query(query, [userId, userId]);
+    res.json({ success: true, users: result });
+  } catch (err) {
+    console.error("Error fetching chat data:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
@@ -102,27 +126,6 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/api/loadChaters/:userId", async (req, res) => {
-  const { userId } = req.params;
-
-  const query = `
-    SELECT DISTINCT u.id, u.user_name, cs.sender_id, cs.receiver_id 
-    FROM user u
-    JOIN chat_sessions cs 
-      ON (u.id = cs.sender_id OR u.id = cs.receiver_id)
-    WHERE cs.sender_id = ? OR cs.receiver_id = ?;
-  `;
-
-  try {
-    const [result] = await pool.query(query, [userId, userId]);
-    res.json({ success: true, users: result });
-  } catch (err) {
-    console.error("Error fetching chat data:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-
 app.get("/api/loadActiveChat/:u/:r", async (req, res) => {
   const senderId = parseInt(req.params.u);
   const receiverId = parseInt(req.params.r);
@@ -135,7 +138,6 @@ app.get("/api/loadActiveChat/:u/:r", async (req, res) => {
   ORDER BY ch.created_at DESC
 `;
 
-
   try {
     const [result] = await pool.query(query, [senderId, receiverId, receiverId, senderId]);
     res.json({ success: true, users: result });
@@ -146,51 +148,51 @@ app.get("/api/loadActiveChat/:u/:r", async (req, res) => {
 });
 
 
-app.post("/api/sendMessage/:r/:s", async (req, res) => {
-  const senderId = req.params.s;
-  const receiverId = req.params.r;
-  const { chat_description } = req.body;
+// app.post("/api/sendMessage/:r/:s", async (req, res) => {
+//   const senderId = req.params.s;
+//   const receiverId = req.params.r;
+//   const { chat_description } = req.body;
 
-  if (!senderId || !receiverId || !chat_description) {
-    return res.status(400).json({ success: false, message: "Missing fields" });
-  }
+//   if (!senderId || !receiverId || !chat_description) {
+//     return res.status(400).json({ success: false, message: "Missing fields" });
+//   }
 
-  const conn = await pool.getConnection();
+//   const conn = await pool.getConnection();
 
-  try {
-    await conn.beginTransaction();
+//   try {
+//     await conn.beginTransaction();
 
-    let chatId;
+//     let chatId;
 
-      // Otherwise, create a new session
-      const [insertRes] = await conn.query(
-        `INSERT INTO chat_sessions (sender_id, receiver_id) VALUES (?, ?)`,
-        [senderId, receiverId]
-      );
-      chatId = insertRes.insertId;
+//       // Otherwise, create a new session
+//       const [insertRes] = await conn.query(
+//         `INSERT INTO chat_sessions (sender_id, receiver_id) VALUES (?, ?)`,
+//         [senderId, receiverId]
+//       );
+//       chatId = insertRes.insertId;
 
-    // Step 2: Insert message into chat_history
-    await conn.query(
-      `INSERT INTO chat_history (chat_id, sender_id, receiver_id, chat_description, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-      [chatId, senderId, receiverId, chat_description]
-    );
+//     // Step 2: Insert message into chat_history
+//     await conn.query(
+//       `INSERT INTO chat_history (chat_id, sender_id, receiver_id, chat_description, created_at)
+//        VALUES (?, ?, ?, ?, NOW())`,
+//       [chatId, senderId, receiverId, chat_description]
+//     );
 
-    await conn.commit();
+//     await conn.commit();
 
-    res.json({ success: true, chat_id: chatId });
-  } catch (err) {
-    await conn.rollback();
-    console.error("Transaction failed:", err);
-    res.status(500).json({
-      success: false,
-      message: "Database error",
-      details: err.message,
-    });
-  } finally {
-    conn.release();
-  }
-});
+//     res.json({ success: true, chat_id: chatId });
+//   } catch (err) {
+//     await conn.rollback();
+//     console.error("Transaction failed:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Database error",
+//       details: err.message,
+//     });
+//   } finally {
+//     conn.release();
+//   }
+// });
 
 
 

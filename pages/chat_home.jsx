@@ -11,16 +11,14 @@ export default function HomePage() {
   const [chatname, setChatName] = useState({ id: null, name: "" });
   const [newChat, setNewChat] = useState('')
   const [renderCheck, setrenderCheck] = useState(false)
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(false);
 
   useEffect(() => {
     fetch(`http://localhost:5000/api/loadChaters/${userId}`)  // replace with your API
     .then((res) => res.json())
     .then((data) => {setChaters(data.users.filter((users) => users.id !== parseInt(userId)));})
     .catch((err) => console.error("Error fetching projects:", err));
-    
-    console.log(renderCheck)
-  }, [renderCheck]);
+  }, []);
   function loadchat(id,name){
     console.log(renderCheck)
     fetch(`http://localhost:5000/api/loadActiveChat/${userId}/${id}`)  // replace with your API
@@ -87,6 +85,7 @@ export default function HomePage() {
           <div className="container-fluid" style={{ height: "100vh" }}>
           </div>
         </div>
+        {/* CHATER'S DETAIL'S */}
         <div className="col-3 d-flex flex-row justify-content-start chat-box border-1 rounded-start-3">
           <div className="container-fluid overflow-auto" style={{ height: "100vh" }}>
             <h3 className="text-white p-1">Chats</h3>
@@ -96,9 +95,7 @@ export default function HomePage() {
             ></div>
             {console.log(chaters)}
             {console.log(chatDetails)}
-            {/* {console.log(activeChat)} */}
            {chaters
-            // .filter((users) => users.id !== parseInt(userId))
             .map((users) => (
               <div key={users.id} className="my-2 p-1 d-flex flex-row justify-content-between border-1 border-black border-bottom hover-shadow" 
               onClick={() => loadchat(users.id,users.user_name)} style={{ height: "10vh" }}>
@@ -123,8 +120,10 @@ export default function HomePage() {
 
           </div>
         </div>
+        {/* CHATER'S DETAIL'S ENDS */}
         <div className="col-8 d-flex flex-row justify-content-start chat-box border-start border-1 border-dark p-1">
           <div className="container-fluid"  style={{ height: "100vh" }}>
+            {/* CHATER HEAD */}
             <div
               className="card d-flex flex-row p-1"
               style={{ height: "8vh" }}
@@ -138,10 +137,14 @@ export default function HomePage() {
               ></img>
               <h3 className="text-white ps-1 ms-3">{chatname.name}</h3>
             </div>
+             {/* CHATER HEAD ENDS */}
+            {/* CHAT CONTAINER */}
+            {if(Object.keys(chatDetails).length === 0){}}
+            {console.log(chatDetails)}
             <div id="chat_container" className="card p-3 mt-1 d-flex flex-column justify-content-end" style={{ height: "85vh" }}>
             <div id="chat_content" className="p-3 mt-1 overflow-auto d-flex flex-column-reverse m-2" style={{ height: "80vh" }}>
                 {chatDetails.map((chat, index) => {
-                // {console.log(chatDetails)}
+                
                   const isSender = chat.sender_id === userId;
                   return (
                     <div
@@ -198,6 +201,7 @@ export default function HomePage() {
                 </button>
             </div>
             </div>
+            {/* CHAT CONTAINER ENDS */}
           </div>
         </div>
       </div>
